@@ -1,0 +1,41 @@
+
+{
+  "name": "Tecno Tiendas Logistics",
+  "short_name": "TecnoLogistics",
+  "description": "Gestión logística y de reparaciones para Tecno Tiendas.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#101b22",
+  "theme_color": "#0d93f2",
+  "orientation": "portrait",
+  "categories": ["business", "productivity", "logistics"],
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=tecno&backgroundColor=0d93f2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=tecno&backgroundColor=0d93f2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=tecno&backgroundColor=0d93f2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=1000",
+      "sizes": "1000x2000",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Gestión de Rutas"
+    }
+  ]
+}

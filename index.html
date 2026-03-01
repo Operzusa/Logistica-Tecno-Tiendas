@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Tecno Tiendas Logistics</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0d93f2" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TecnoLogistics" />
+    <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/shapes/svg?seed=tecno&backgroundColor=0d93f2" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "var(--color-primary)",
+                        "secondary": "var(--color-secondary)",
+                        "background-dark": "var(--color-bg)",
+                        "surface-dark": "var(--color-surface)",
+                        "border-dark": "var(--color-border)",
+                        "text-main": "var(--color-text-main)",
+                        "text-muted": "var(--color-text-muted)",
+                        "success": "#10b981",
+                        "warning": "#f59e0b"
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    boxShadow: {
+                        "neon": "var(--shadow-neon)",
+                        "neon-strong": "var(--shadow-neon-strong)",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* TEMA DEFAULT (DARK BLUE) */
+        :root {
+            --color-primary: #0d93f2;
+            --color-secondary: #ff4d4d;
+            --color-bg: #101b22;
+            --color-surface: #1c2a33;
+            --color-border: rgba(255,255,255,0.05);
+            --color-text-main: #ffffff;
+            --color-text-muted: #94a3b8;
+            --shadow-neon: 0 0 10px rgba(13, 147, 242, 0.3);
+            --shadow-neon-strong: 0 0 20px rgba(13, 147, 242, 0.5);
+            --font-scale: 1;
+        }
+
+        /* TEMA WHATSAPP (DARK GREEN) */
+        .theme-whatsapp {
+            --color-primary: #00a884;
+            --color-secondary: #eb5545;
+            --color-bg: #0b141a;
+            --color-surface: #111b21;
+            --color-border: #222d34;
+            --color-text-main: #e9edef;
+            --color-text-muted: #8696a0;
+            --shadow-neon: 0 2px 5px rgba(0, 0, 0, 0.2);
+            --shadow-neon-strong: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* TEMA CLARO (LIGHT AZURE) */
+        .theme-light {
+            --color-primary: #0088cc;
+            --color-secondary: #e53935;
+            --color-bg: #f0f2f5;
+            --color-surface: #ffffff;
+            --color-border: #e1e4e8;
+            --color-text-main: #111b21;
+            --color-text-muted: #667781;
+            --shadow-neon: 0 4px 12px rgba(0, 136, 204, 0.15);
+            --shadow-neon-strong: 0 8px 24px rgba(0, 136, 204, 0.2);
+        }
+
+        /* ANIMACIÓN DE ADVERTENCIA GLOW */
+        @keyframes warning-glow {
+            0%, 100% {
+                text-shadow: 0 0 2px rgba(255, 77, 77, 0.4);
+                opacity: 0.7;
+                transform: scale(1);
+            }
+            50% {
+                text-shadow: 0 0 12px rgba(255, 77, 77, 0.9), 0 0 20px rgba(255, 77, 77, 0.6);
+                opacity: 1;
+                transform: scale(1.15);
+            }
+        }
+        .animate-warning-glow {
+            animation: warning-glow 1.5s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        /* SOBRESCRITURAS PARA MODO CLARO */
+        .theme-light .text-white { color: var(--color-text-main) !important; }
+        .theme-light .text-slate-500, .theme-light .text-slate-400 { color: var(--color-text-muted) !important; }
+        .theme-light .bg-white\/5 { background-color: rgba(0,0,0,0.04) !important; }
+        .theme-light .border-white\/5, .theme-light .border-white\/10 { border-color: var(--color-border) !important; }
+        .theme-light .bg-background-dark\/95 { background-color: rgba(240, 242, 245, 0.95) !important; }
+        .theme-light .bg-surface-dark\/95 { background-color: rgba(255, 255, 255, 0.95) !important; }
+        .theme-light .bg-black\/20 { background-color: rgba(0,0,0,0.05) !important; }
+
+        /* CONFIGURACIÓN DE TAMAÑOS PROPORCIONALES */
+        .font-size-small { --font-scale: 0.9; }
+        .font-size-medium { --font-scale: 1.1; }
+        .font-size-large { --font-scale: 1.35; }
+
+        .font-size-small, .font-size-medium, .font-size-large {
+            font-size: calc(16px * var(--font-scale));
+        }
+
+        [class*="text-xs"] { font-size: calc(0.75rem * var(--font-scale)) !important; line-height: calc(1rem * var(--font-scale)) !important; }
+        [class*="text-sm"] { font-size: calc(0.875rem * var(--font-scale)) !important; line-height: calc(1.25rem * var(--font-scale)) !important; }
+        [class*="text-base"] { font-size: calc(1rem * var(--font-scale)) !important; line-height: calc(1.5rem * var(--font-scale)) !important; }
+        [class*="text-lg"] { font-size: calc(1.125rem * var(--font-scale)) !important; line-height: calc(1.75rem * var(--font-scale)) !important; }
+        [class*="text-xl"] { font-size: calc(1.25rem * var(--font-scale)) !important; line-height: calc(1.75rem * var(--font-scale)) !important; }
+        [class*="text-2xl"] { font-size: calc(1.5rem * var(--font-scale)) !important; line-height: calc(2rem * var(--font-scale)) !important; }
+        
+        .font-size-large button:not(.rounded-full) {
+            padding-top: 1.25rem !important;
+            padding-bottom: 1.25rem !important;
+        }
+
+        .font-size-large input, .font-size-large select {
+            height: auto !important;
+            padding-top: 0.8rem !important;
+            padding-bottom: 0.8rem !important;
+        }
+
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text-main);
+            font-family: 'Space Grotesk', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, font-size 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.91.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(reg => {
+            console.log('SW registrado con éxito:', reg.scope);
+          }).catch(err => {
+            console.log('Error al registrar SW:', err);
+          });
+        });
+      }
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

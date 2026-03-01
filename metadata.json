@@ -1,0 +1,8 @@
+{
+  "name": "Tecno Tiendas Logistics",
+  "description": "App para domiciliarios de Tecno Tiendas: gestión de rutas, servicios de reparación, control de fotos de evidencia y cierre de caja diario.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
