@@ -27,16 +27,19 @@ const formatDuration = (minutes: number) => {
 const getPendingMessagesForDomi = (logs: ServiceLog[] = []) => {
   const safeLogs = logs || [];
   if (safeLogs.length === 0) return 0;
-  const lastLog = safeLogs[safeLogs.length - 1];
-  if (lastLog.autor === 'Domiciliario') return 0;
-  // Solo contar mensajes que NO estén leídos
+  
   let count = 0;
+  // Count unread admin messages from the end
   for (let i = safeLogs.length - 1; i >= 0; i--) {
     const log = safeLogs[i];
     if (log.autor === 'Administrador' && log.status !== 'read') count++;
-    else break; // Si ya hay uno mío o leído, paramos (lógica simple)
+    else if (log.autor === 'Domiciliario') break; // Si ya hay uno mío o leído, paramos (lógica simple)
   }
-  return count;
+  
+  // ALSO count unread payment confirmations
+  const unreadPayments = safeLogs.filter(log => log.type === 'payment' && log.paymentStatus === 'paid' && log.viewed !== true).length;
+  
+  return count + unreadPayments;
 };
 
 // --- WIDGET UNIFICADO DE RUTA ACTIVA (Dashboard Panel) ---
@@ -177,8 +180,10 @@ export const RouteScreen: React.FC<Props> = ({
     try {
       const data = await supabaseService.getRutaDelDia(user.id);
       
+      const isFirstFetch = prevServicesIds.current.length === 0;
+
       const currentIds = (data.servicios || []).map(s => s.id);
-      if (prevServicesIds.current.length > 0) {
+      if (!isFirstFetch) {
         const hasNewService = currentIds.some(id => !prevServicesIds.current.includes(id));
         if (hasNewService) {
           audioService.playNewService();
@@ -199,9 +204,11 @@ export const RouteScreen: React.FC<Props> = ({
 
         // Check for paid payments
         currentLogs.forEach(log => {
-          if (log.type === 'payment' && log.paymentStatus === 'paid') {
+          if (log.type === 'payment' && log.paymentStatus === 'paid' && log.viewed !== true) {
             if (!paidLogIds.current.has(log.id)) {
-              newPaymentCompletedData = { serviceId: s.id, logId: log.id };
+              if (!isFirstFetch) {
+                newPaymentCompletedData = { serviceId: s.id, logId: log.id };
+              }
               paidLogIds.current.add(log.id);
             }
           }
@@ -338,10 +345,11 @@ export const RouteScreen: React.FC<Props> = ({
       {paymentSuccessData && (
         <div 
           className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[90%] animate-in slide-in-from-top duration-500 cursor-pointer"
-          onClick={() => {
+          onClick={async () => {
             setChatServicioId(paymentSuccessData.serviceId);
+            await supabaseService.markPaymentLogAsViewed(paymentSuccessData.serviceId, paymentSuccessData.logId);
             setPaymentSuccessData(null);
-            
+            fetchData();
             // Opcional: Si quisieras hacer scroll específico al logId, podrías pasarlo al modal
             // Por ahora, el modal ya hace auto-scroll al fondo donde está el comprobante.
           }}
@@ -866,9 +874,19 @@ export const ServiceChatModal: React.FC<{
                                                 <div className="mt-3 pt-3 border-t border-white/5">
                                                    {log.paymentStatus === 'paid' && log.receiptUrl ? (
                                                       <div 
-                                                        onClick={() => setPreviewImage(log.receiptUrl || null)}
-                                                        className="mt-2 cursor-pointer overflow-hidden rounded-lg bg-black/20 active:opacity-80 transition-opacity border border-white/10"
+                                                        onClick={async () => {
+                                                            setPreviewImage(log.receiptUrl || null);
+                                                            if (!isAdmin && log.viewed !== true) {
+                                                                await supabaseService.markPaymentLogAsViewed(servicio.id, log.id);
+                                                                onMessageSent(); // Trigger refresh
+                                                            }
+                                                        }}
+                                                        className="mt-2 cursor-pointer overflow-hidden rounded-lg bg-black/20 active:opacity-80 transition-opacity border border-white/10 relative"
                                                       >
+                                                         {/* Unread Badge */}
+                                                         {!isAdmin && log.viewed !== true && (
+                                                            <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-neon-strong z-10" />
+                                                         )}
                                                          <div className="bg-black/40 p-2 flex items-center justify-between">
                                                             <p className="text-[10px] font-bold text-white uppercase">Comprobante Adjunto</p>
                                                             <span className="material-symbols-outlined text-slate-400 text-sm">open_in_full</span>

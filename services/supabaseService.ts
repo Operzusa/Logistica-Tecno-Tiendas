@@ -1,5 +1,6 @@
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import localforage from 'localforage';
 import { 
   User, AppSettings, Servicio, Ruta, CierreCaja, Actividad, Proveedor, 
   TecnicoSatelite, ServiceLog, UserRole, PaymentData, EstadoServicio, Gasto, PendingTechnicianChange, TipoServicio
@@ -178,9 +179,45 @@ class SupabaseService {
   }
 
   async getAllServicios(): Promise<Servicio[]> {
-    const { data, error } = await this.client.from('servicios').select('*').order('fecha_asignacion', { ascending: true });
-    if (error) return [];
-    return (data || []).map(s => this.mapServiceFromDB(s));
+    // 1. Get cached services
+    let cachedServices: any[] = await localforage.getItem('cached_servicios') || [];
+    
+    // 2. Find the highest updated_at in cache
+    let lastUpdated = '1970-01-01T00:00:00.000Z';
+    if (cachedServices.length > 0) {
+      cachedServices.forEach(s => {
+        const sUpdated = s.updated_at || s.fecha_asignacion || '1970-01-01T00:00:00.000Z';
+        if (sUpdated > lastUpdated) {
+          lastUpdated = sUpdated;
+        }
+      });
+    }
+
+    // 3. Query Supabase for newer records
+    const { data: newOrUpdated, error } = await this.client
+      .from('servicios')
+      .select('*')
+      .or(`updated_at.gt.${lastUpdated},fecha_asignacion.gt.${lastUpdated}`)
+      .order('updated_at', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching incremental services:", error);
+      // Fallback to cache if offline or error
+      return cachedServices.map(s => this.mapServiceFromDB(s)).sort((a, b) => new Date(a.fecha_asignacion).getTime() - new Date(b.fecha_asignacion).getTime());
+    }
+
+    // 4. Merge new records into cache
+    if (newOrUpdated && newOrUpdated.length > 0) {
+      const newMap = new Map(newOrUpdated.map(s => [s.id, s]));
+      const merged = cachedServices.filter(s => !newMap.has(s.id)).concat(newOrUpdated);
+      
+      // Save back to cache
+      await localforage.setItem('cached_servicios', merged);
+      cachedServices = merged;
+    }
+
+    // 5. Map and sort
+    return cachedServices.map(s => this.mapServiceFromDB(s)).sort((a, b) => new Date(a.fecha_asignacion).getTime() - new Date(b.fecha_asignacion).getTime());
   }
 
   async addServicio(servicio: Partial<Servicio>) {
@@ -260,6 +297,11 @@ class SupabaseService {
   async deleteServicio(id: string) {
     const { error } = await this.client.from('servicios').delete().eq('id', id);
     if (error) throw error;
+    
+    // Remove from cache
+    const cachedServices: any[] = await localforage.getItem('cached_servicios') || [];
+    const updatedCache = cachedServices.filter(s => s.id !== id);
+    await localforage.setItem('cached_servicios', updatedCache);
   }
 
   async getRutaDelDia(userId: string): Promise<Ruta> {
@@ -332,7 +374,7 @@ class SupabaseService {
       const logs = srv?.logs || [];
       const updatedLogs = logs.map((l: ServiceLog) => {
           if (l.id === logId) {
-              return { ...l, paymentStatus: 'paid', receiptUrl: receiptUrl };
+              return { ...l, paymentStatus: 'paid', receiptUrl: receiptUrl, viewed: false };
           }
           return l;
       });
@@ -468,6 +510,24 @@ class SupabaseService {
     };
   }
 
+  async markPaymentLogAsViewed(serviceId: string, logId: string) {
+    const { data: srv } = await this.client.from('servicios').select('logs').eq('id', serviceId).single();
+    if (!srv) return;
+    const logs = srv.logs || [];
+    let hasChanges = false;
+    const updatedLogs = logs.map((l: ServiceLog) => {
+        if (l.id === logId && !l.viewed) {
+            hasChanges = true;
+            return { ...l, viewed: true };
+        }
+        return l;
+    });
+    
+    if (hasChanges) {
+        await this.client.from('servicios').update({ logs: updatedLogs }).eq('id', serviceId);
+    }
+  }
+
   async addGasto(gasto: Partial<Gasto>) {
     const { error } = await this.client.from('gastos').insert([gasto]);
     if (error) throw error;
@@ -511,8 +571,44 @@ class SupabaseService {
   }
 
   async getHistorial(): Promise<Actividad[]> {
-    const { data } = await this.client.from('actividades').select('*').order('timestamp', { ascending: false }).limit(50);
-    return (data || []) as Actividad[];
+    // 1. Get cached activities
+    let cachedActivities: any[] = await localforage.getItem('cached_actividades') || [];
+    
+    // 2. Find the highest timestamp in cache
+    let lastUpdated = '1970-01-01T00:00:00.000Z';
+    if (cachedActivities.length > 0) {
+      cachedActivities.forEach(a => {
+        const aUpdated = a.timestamp || '1970-01-01T00:00:00.000Z';
+        if (aUpdated > lastUpdated) {
+          lastUpdated = aUpdated;
+        }
+      });
+    }
+
+    // 3. Query Supabase for newer records
+    const { data: newOrUpdated, error } = await this.client
+      .from('actividades')
+      .select('*')
+      .gt('timestamp', lastUpdated)
+      .order('timestamp', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching incremental activities:", error);
+      return cachedActivities as Actividad[];
+    }
+
+    // 4. Merge new records into cache
+    if (newOrUpdated && newOrUpdated.length > 0) {
+      const newMap = new Map(newOrUpdated.map(a => [a.id, a]));
+      const merged = cachedActivities.filter(a => !newMap.has(a.id)).concat(newOrUpdated);
+      
+      // Save back to cache
+      await localforage.setItem('cached_actividades', merged);
+      cachedActivities = merged;
+    }
+
+    // 5. Return sorted
+    return cachedActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) as Actividad[];
   }
 
   // --- DIRECTORY ---

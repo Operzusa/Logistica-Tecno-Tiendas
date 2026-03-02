@@ -152,13 +152,14 @@ export interface ServiceLog {
   id: string;
   timestamp: string;
   mensaje: string;
-  autor: 'Domiciliario' | 'Administrador';
+  autor: 'Domiciliario' | 'Administrador' | 'Sistema';
   image?: string; 
   status?: 'sent' | 'delivered' | 'read';
   type?: 'text' | 'payment';
   paymentData?: PaymentData;
   paymentStatus?: 'pending' | 'paid';
   receiptUrl?: string;
+  viewed?: boolean;
 }
 
 export interface Servicio {

@@ -75,7 +75,7 @@ const DailyHistoryGroup: React.FC<{ group: DateGroup; onSelectService: (s: Servi
       {/* DAILY SUMMARY CARD - Clickable Header */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="sticky top-[72px] z-20 mb-4 bg-slate-900/95 backdrop-blur border border-white/10 p-4 rounded-2xl shadow-lg flex items-center justify-between ring-1 ring-white/5 cursor-pointer hover:bg-white/5 transition-all active:scale-[0.99]"
+        className="sticky top-[116px] z-20 mb-4 bg-slate-900/95 backdrop-blur border border-white/10 p-4 rounded-2xl shadow-lg flex items-center justify-between ring-1 ring-white/5 cursor-pointer hover:bg-white/5 transition-all active:scale-[0.99]"
       >
         <div>
           <h3 className="text-sm font-black text-white capitalize">{group.displayDate}</h3>
@@ -197,6 +197,7 @@ const DailyHistoryGroup: React.FC<{ group: DateGroup; onSelectService: (s: Servi
 export const HistoryScreen: React.FC<Props> = ({ onBack, onSelectService }) => {
   const [loading, setLoading] = useState(true);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [groupingMode, setGroupingMode] = useState<'day' | 'week' | 'month' | 'year'>('day');
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -231,20 +232,39 @@ export const HistoryScreen: React.FC<Props> = ({ onBack, onSelectService }) => {
 
     timeline.forEach(item => {
       const dateObj = new Date(item.timestamp);
-      const dateKey = getColombiaDateString(dateObj); // YYYY-MM-DD
+      
+      let dateKey = '';
+      let displayDate = '';
+
+      if (groupingMode === 'day') {
+        dateKey = getColombiaDateString(dateObj); // YYYY-MM-DD
+        const formatted = dateObj.toLocaleDateString('es-ES', { 
+          timeZone: 'America/Bogota', weekday: 'long', day: 'numeric', month: 'short' 
+        });
+        displayDate = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+      } else if (groupingMode === 'week') {
+        const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
+        dateKey = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+        displayDate = `Semana ${weekNo} - ${d.getUTCFullYear()}`;
+      } else if (groupingMode === 'month') {
+        const year = dateObj.toLocaleDateString('es-ES', { timeZone: 'America/Bogota', year: 'numeric' });
+        const month = dateObj.toLocaleDateString('es-ES', { timeZone: 'America/Bogota', month: '2-digit' });
+        dateKey = `${year}-${month}`;
+        const formatted = dateObj.toLocaleDateString('es-ES', { timeZone: 'America/Bogota', month: 'long', year: 'numeric' });
+        displayDate = formatted.charAt(0).toUpperCase() + formatted.slice(1);
+      } else if (groupingMode === 'year') {
+        dateKey = dateObj.toLocaleDateString('es-ES', { timeZone: 'America/Bogota', year: 'numeric' });
+        displayDate = dateKey;
+      }
 
       if (!groups[dateKey]) {
-        // Formato bonito: "Lunes, 24 Oct" (en zona horaria de Colombia)
-        const displayDate = dateObj.toLocaleDateString('es-ES', { 
-          timeZone: 'America/Bogota',
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'short' 
-        });
-
         groups[dateKey] = {
           dateKey,
-          displayDate: displayDate.charAt(0).toUpperCase() + displayDate.slice(1),
+          displayDate,
           items: [],
           stats: { totalRevenue: 0, completedServices: 0, fuelAlerts: 0 }
         };
@@ -271,19 +291,38 @@ export const HistoryScreen: React.FC<Props> = ({ onBack, onSelectService }) => {
 
     // Retornar array ordenado por fecha descendente
     return Object.values(groups).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
-  }, [timeline]);
+  }, [timeline, groupingMode]);
 
   return (
     <div className="max-w-md mx-auto min-h-screen flex flex-col bg-background-dark animate-in slide-in-from-bottom duration-300">
-      <header className="p-4 border-b border-white/10 flex items-center justify-between sticky top-0 bg-background-dark/95 backdrop-blur-md z-30">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-full">
-            <span className="material-symbols-outlined">arrow_back</span>
-          </button>
-          <h1 className="text-xl font-bold">Historial Maestro</h1>
+      <header className="p-4 border-b border-white/10 flex flex-col gap-4 sticky top-0 bg-background-dark/95 backdrop-blur-md z-30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-full">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+            <h1 className="text-xl font-bold">Historial Maestro</h1>
+          </div>
+          <div className="bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+            <span className="text-[10px] text-primary font-black uppercase tracking-widest">Global</span>
+          </div>
         </div>
-        <div className="bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-          <span className="text-[10px] text-primary font-black uppercase tracking-widest">Global</span>
+        
+        {/* Grouping Controls */}
+        <div className="flex bg-surface-dark rounded-xl p-1 border border-white/5 shadow-inner">
+          {(['day', 'week', 'month', 'year'] as const).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setGroupingMode(mode)}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${
+                groupingMode === mode 
+                  ? 'bg-primary text-white shadow-md' 
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {mode === 'day' ? 'Día' : mode === 'week' ? 'Semana' : mode === 'month' ? 'Mes' : 'Año'}
+            </button>
+          ))}
         </div>
       </header>
 
