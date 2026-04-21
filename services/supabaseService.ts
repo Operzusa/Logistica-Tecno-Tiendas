@@ -549,14 +549,26 @@ class SupabaseService {
 
   // NEW: Allows Admin to resolve/dispatch the fuel request
   async resolverAlertaGasolina(actividadId: string): Promise<void> {
+    const now = new Date().toISOString();
     const { error } = await this.client.from('actividades')
       .update({ 
         descripcion: 'GASOLINA DESPACHADA', 
-        color: 'text-success' 
+        color: 'text-success',
+        timestamp: now
       })
       .eq('id', actividadId);
     
     if (error) throw error;
+    
+    // Also update local cache so the current admin sees the change immediately
+    const cachedActivities: any[] = await localforage.getItem('cached_actividades') || [];
+    const index = cachedActivities.findIndex(a => a.id === actividadId);
+    if (index !== -1) {
+      cachedActivities[index].descripcion = 'GASOLINA DESPACHADA';
+      cachedActivities[index].color = 'text-success';
+      cachedActivities[index].timestamp = now;
+      await localforage.setItem('cached_actividades', cachedActivities);
+    }
   }
 
   async realizarCierreDiario(reporte: CierreCaja) {
